@@ -118,6 +118,11 @@ p { margin: 0; }
 .step { background: var(--white); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--hairline), 0 2px 8px rgba(0,0,0,.04); padding: 24px; display: flex; flex-direction: column; gap: 14px; }
 .step .k { font-family: var(--font-head); font-weight: 700; font-size: 14px; color: var(--slate); }
 .step .pro { font-weight: 600; }
+.step:not(.small) { box-shadow: inset 0 0 0 2px var(--velvet), 0 2px 8px rgba(0,0,0,.04); }
+.more-h { margin-top: 28px; }
+.more { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.step.small { padding: 18px 20px; gap: 10px; }
+.step.small h3 { font-size: 17px; }
 .cta-slot[hidden] { display: none; }
 .cta-slot { padding-top: 20px; display: flex; }
 .actions { padding-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
@@ -137,7 +142,7 @@ p { margin: 0; }
 (function () {
   // ---- Call to action slot. Empty link keeps the slot hidden. One-line change when Lauren adds it.
   var CTA_URL = 'https://cal.com/rafid/calldemo';
-  var CTA_LABEL = 'Book a call with Rafid';
+  var CTA_LABEL = 'Book a call';
 
   var HELP = 'https://helpdesk.joinblink.com/en/articles/';
   var PRO_LINE = 'This one comes with Pro.';
@@ -303,9 +308,17 @@ p { margin: 0; }
     var pick = null;
     for (var c = 0; c < cand.length; c++) { if (!AREAS[cand[c]].steps[lv[cand[c]]].pro) { pick = cand[c]; break; } }
     if (pick === null && cand.length) pick = cand[0];
+    // Up to three steps, one leading. Never more than one Pro step across all three.
+    var picks = pick === null ? [] : [pick], proCount = pick !== null && AREAS[pick].steps[lv[pick]].pro ? 1 : 0;
+    for (var m = 0; m < cand.length && picks.length < 3; m++) {
+      if (picks.indexOf(cand[m]) !== -1) continue;
+      var isPro = AREAS[cand[m]].steps[lv[cand[m]]].pro;
+      if (isPro && proCount > 0) continue;
+      picks.push(cand[m]); if (isPro) proCount++;
+    }
     var rank = sum <= 6 ? 0 : sum <= 12 ? 1 : sum <= 18 ? 2 : sum <= 24 ? 3 : sum <= 27 ? 4 : 5;
     var mx = Math.max.apply(null, lv), mn = Math.min.apply(null, lv);
-    return { lv: lv, rank: rank, strongest: (mx > 0 && mx > mn) ? strongest : null, pick: pick, step: pick === null ? null : AREAS[pick].steps[lv[pick]] };
+    return { lv: lv, rank: rank, strongest: (mx > 0 && mx > mn) ? strongest : null, pick: pick, picks: picks, step: pick === null ? null : AREAS[pick].steps[lv[pick]] };
   }
 
   var SHORT = ['Teams', 'News', 'Listening', 'Chat', 'New hires', 'Paperwork', 'Recognition'];
@@ -343,12 +356,20 @@ p { margin: 0; }
     h += '<div class="wrap" style="padding-top:0"><div class="sec"><h2>Your strengths at a glance</h2>' + radar(r.lv) +
       (r.rank < 5 ? '<p class="note">The middle is a fresh start. The edge is proving it and repeating it.</p>' : '') + '</div>';
     h += '<div class="sec"><h2>' + (r.step ? 'Your next step' : 'Keep exploring') + '</h2><div class="step">';
-    if (r.step) {
-      h += '<p class="k">' + esc(AREAS[r.pick].name) + '</p><h3>' + esc(r.step.t) + '</h3>';
-      if (r.step.pro) h += '<p class="pro">' + PRO_LINE + '</p>';
-      if (r.step.a) h += '<div><a class="btn btn-linen" target="_blank" rel="noopener" href="' + HELP + r.step.a + '">Read the help article</a></div>';
-    } else { h += '<h3>' + esc(DONE) + '</h3>'; }
-    h += '</div></div>';
+    function stepBody(ix) {
+      var st = AREAS[ix].steps[r.lv[ix]], b = '<p class="k">' + esc(AREAS[ix].name) + '</p><h3>' + esc(st.t) + '</h3>';
+      if (st.pro) b += '<p class="pro">' + PRO_LINE + '</p>';
+      if (st.a) b += '<div><a class="btn btn-linen" target="_blank" rel="noopener" href="' + HELP + st.a + '">Read the help article</a></div>';
+      return b;
+    }
+    if (r.step) { h += stepBody(r.pick); } else { h += '<h3>' + esc(DONE) + '</h3>'; }
+    h += '</div>';
+    if (r.picks.length > 1) {
+      h += '<h2 class="more-h">' + (r.picks.length === 2 ? 'One more when you\'re ready' : 'Two more when you\'re ready') + '</h2><div class="more">';
+      for (var pi = 1; pi < r.picks.length; pi++) h += '<div class="step small">' + stepBody(r.picks[pi]) + '</div>';
+      h += '</div>';
+    }
+    h += '</div>';
     // Call to action slot: hidden while the link is empty, so it leaves no gap.
     h += '<div class="cta-slot" id="cta"' + (CTA_URL ? '' : ' hidden') + '>' + (CTA_URL ? '<a class="btn btn-velvet" target="_blank" rel="noopener" href="' + esc(CTA_URL) + '">' + esc(CTA_LABEL) + '</a>' : '') + '</div>';
     h += '<div class="actions"><button class="btn btn-linen" id="retake" type="button">Retake the quiz</button></div></div>';
